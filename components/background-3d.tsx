@@ -1,60 +1,50 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
-import { Canvas, useFrame } from "@react-three/fiber"
-import { Points, PointMaterial } from "@react-three/drei"
-import * as random from "maath/random/dist/maath-random.esm"
 import { useTheme } from "@/providers/theme-provider"
-import type * as THREE from "three"
-
-function ParticleField({ count = 5000 }) {
-  const points = useRef<THREE.Points>(null!)
-  const { theme } = useTheme()
-
-  // Generate random points in a sphere
-  const sphere = random.inSphere(new Float32Array(count * 3), { radius: 1.5 })
-
-  useFrame((state, delta) => {
-    if (points.current) {
-      points.current.rotation.x += delta * 0.05
-      points.current.rotation.y += delta * 0.075
-    }
-  })
-
-  return (
-    <group rotation={[0, 0, Math.PI / 4]}>
-      <Points ref={points} positions={sphere} stride={3} frustumCulled={false}>
-        <PointMaterial
-          transparent
-          color={theme === "dark" ? "#6366f1" : "#6366f1"}
-          size={0.005}
-          sizeAttenuation={true}
-          depthWrite={false}
-          opacity={0.4}
-        />
-      </Points>
-    </group>
-  )
-}
+import { useEffect, useRef, useState } from "react"
+import * as THREE from "three"
 
 export function Background3D() {
-  const [mounted, setMounted] = useState(false)
+  const [vantaEffect, setVantaEffect] = useState<any>(null)
+  const myRef = useRef(null)
+  const { theme } = useTheme() // Get current theme
+  console.log(theme);
 
-  // Only render after component has mounted (client-side)
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    if (typeof window !== "undefined") {
+      const backgroundColor = theme === "dark" ? 0x1a1a2e : 0xf8f9fa
+      const color = theme === "dark" ? 0xf8f9fa : 0x1a1a2e
+      import("vanta/dist/vanta.net.min.js").then((VANTA) => {
+        if (vantaEffect) vantaEffect.destroy()
 
-  if (!mounted) {
-    return null
-  }
+        setVantaEffect(
+          VANTA.default({
+            el: myRef.current,
+            THREE,
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            color,
+            points: 5.00,
+            speed: 4.00,
+            maxDistance: 19.00,
+            spacing: 20.00,
+            backgroundColor,
+            vertexColors: false, // Explicitly set to avoid undefined error
+          })
+        )
+      })
+    }
 
-  return (
-    <div className="fixed inset-0 -z-10 opacity-70">
-      <Canvas camera={{ position: [0, 0, 1] }}>
-        <ParticleField />
-      </Canvas>
-    </div>
-  )
+    return () => {
+      if (vantaEffect) vantaEffect.destroy()
+    }
+  }, [theme])
+
+  return <div ref={myRef} className="fixed inset-0 top-0 left-0 w-full h-full bg-background">
+  </div>
 }
-

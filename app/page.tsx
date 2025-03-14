@@ -1,3 +1,5 @@
+"use client"
+
 import Image from "next/image"
 import { TypewriterEffect } from "@/components/typewriter-effect"
 import { ProjectCard } from "@/components/project-card"
@@ -13,6 +15,7 @@ import { InspirationalQuote } from "@/components/inspirational-quote"
 import { quotes } from "@/data/quotes"
 import { Button } from "@/components/ui/button"
 import { Github, Linkedin, Mail, Download, ArrowDown, Code, Briefcase, User, Send } from "lucide-react"
+import { useEffect } from "react"
 
 export default function Home() {
   const words = [
@@ -106,10 +109,23 @@ export default function Home() {
     },
   ]
 
+  useEffect(()=> {
+    const threeScript = document.createElement('script');
+    threeScript.setAttribute('id', 'threeScript');
+    threeScript.setAttribute('src', 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js');
+    document.getElementsByTagName('head')[0].appendChild(threeScript);
+
+    return () => {
+      if (threeScript) {
+        threeScript.remove();
+      }
+    }
+  }, [])
+
   return (
     <main className="flex min-h-screen flex-col items-center bg-background text-foreground">
       <CursorEffect />
-      <Background3D />
+      {/* <Background3D /> */}
       <ThemeToggle />
 
       {/* Hero Section */}
