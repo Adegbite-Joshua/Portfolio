@@ -1,5 +1,3 @@
-"use client"
-
 import Image from "next/image"
 import { TypewriterEffect } from "@/components/typewriter-effect"
 import { ProjectCard } from "@/components/project-card"
@@ -8,14 +6,16 @@ import { ContactForm } from "@/components/contact-form"
 import { CursorEffect } from "@/components/cursor-effect"
 import { ScrollReveal } from "@/components/scroll-reveal"
 import { BackgroundPattern } from "@/components/background-pattern"
-import { Background3D } from "@/components/background-3d"
+import { VantaBackground } from "@/components/vanta-background"
 import { SectionDivider } from "@/components/section-divider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { InspirationalQuote } from "@/components/inspirational-quote"
 import { quotes } from "@/data/quotes"
 import { Button } from "@/components/ui/button"
-import { Github, Linkedin, Mail, Download, ArrowDown, Code, Briefcase, User, Send } from "lucide-react"
-import { useEffect } from "react"
+import { Github, Linkedin, Mail, Download, ArrowDown, Code, Briefcase, User, Send, TwitterIcon } from "lucide-react"
+import { FallbackBackground } from "@/components/fallback-background"
+import { projects } from "@/data/projects"
+import { AutoScrollingTechStack } from "@/components/auto-scrolling-tech-stacks"
 
 export default function Home() {
   const words = [
@@ -36,35 +36,6 @@ export default function Home() {
     },
     {
       text: "Technologies.",
-    },
-  ]
-
-  const projects = [
-    {
-      title: "E-commerce Platform",
-      description:
-        "A full-stack e-commerce solution with payment integration, user authentication, and admin dashboard.",
-      image: "/placeholder.svg?height=300&width=500",
-      tags: ["React", "Node.js", "MongoDB", "Stripe", "Redux"],
-      demoLink: "https://example.com",
-      codeLink: "https://github.com",
-    },
-    {
-      title: "Real-time Chat Application",
-      description:
-        "Messaging platform with real-time updates, user presence indicators, and file sharing capabilities.",
-      image: "/placeholder.svg?height=300&width=500",
-      tags: ["Next.js", "Socket.io", "Express", "PostgreSQL", "Tailwind CSS"],
-      demoLink: "https://example.com",
-      codeLink: "https://github.com",
-    },
-    {
-      title: "Content Management System",
-      description: "Custom CMS built for a digital marketing agency with content scheduling and analytics.",
-      image: "/placeholder.svg?height=300&width=500",
-      tags: ["Vue.js", "Laravel", "MySQL", "AWS", "Docker"],
-      demoLink: "https://example.com",
-      codeLink: "https://github.com",
     },
   ]
 
@@ -109,23 +80,11 @@ export default function Home() {
     },
   ]
 
-  useEffect(()=> {
-    const threeScript = document.createElement('script');
-    threeScript.setAttribute('id', 'threeScript');
-    threeScript.setAttribute('src', 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js');
-    document.getElementsByTagName('head')[0].appendChild(threeScript);
-
-    return () => {
-      if (threeScript) {
-        threeScript.remove();
-      }
-    }
-  }, [])
-
   return (
     <main className="flex min-h-screen flex-col items-center bg-background text-foreground">
       <CursorEffect />
-      {/* <Background3D /> */}
+      <FallbackBackground />
+      <VantaBackground />
       <ThemeToggle />
 
       {/* Hero Section */}
@@ -135,7 +94,7 @@ export default function Home() {
         <div className="flex flex-col items-center md:items-start space-y-6 md:w-1/2 text-center md:text-left mb-8 md:mb-0 z-10">
           <ScrollReveal>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              Hi, I'm <span className="text-primary">John Doe</span>
+              Hi, I'm <span className="text-primary">Joshua Adegbite</span>
             </h1>
           </ScrollReveal>
 
@@ -185,6 +144,14 @@ export default function Home() {
                 <Linkedin className="h-6 w-6" />
               </a>
               <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
+              >
+                <TwitterIcon className="h-6 w-6" />
+              </a>
+              <a
                 href="mailto:contact@example.com"
                 className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
               >
@@ -198,8 +165,8 @@ export default function Home() {
           <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary/50 shadow-[0_0_25px_rgba(99,102,241,0.4)]">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent z-10"></div>
             <Image
-              src="/placeholder.svg?height=400&width=400"
-              alt="John Doe - Software Engineer"
+              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG-20240930-WA0016.jpg-WhkStI7snQNAgwpbFfF0Sft7ckkgwY.jpeg"
+              alt="Joshua Adegbite - Software Engineer"
               fill
               className="object-cover"
               priority
@@ -307,6 +274,14 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+              </ScrollReveal>
+
+              <ScrollReveal delay={800}>
+                <h3 className="text-xl font-semibold mb-6 flex items-center">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary mr-2"></span>
+                  Technologies I Work With
+                </h3>
+                <AutoScrollingTechStack />
               </ScrollReveal>
             </div>
           </div>
@@ -430,6 +405,19 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-3 group">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                      <TwitterIcon className="h-5 w-5" />
+                    </div>
+                    <a
+                      href="https://twitter.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors"
+                    >
+                      @joshuaadegbite
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-3 group">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                       <Linkedin className="h-5 w-5" />
                     </div>
                     <a
@@ -438,7 +426,7 @@ export default function Home() {
                       rel="noopener noreferrer"
                       className="hover:text-primary transition-colors"
                     >
-                      linkedin.com/in/johndoe
+                      linkedin.com/in/joshuaadegbite
                     </a>
                   </div>
                   <div className="flex items-center gap-3 group">
@@ -451,7 +439,7 @@ export default function Home() {
                       rel="noopener noreferrer"
                       className="hover:text-primary transition-colors"
                     >
-                      github.com/johndoe
+                      github.com/joshuaadegbite
                     </a>
                   </div>
                 </div>
@@ -478,7 +466,7 @@ export default function Home() {
       <footer className="relative w-full py-8 px-4 md:px-6 border-t border-primary/10">
         <div className="container mx-auto flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
-            <p className="text-muted-foreground">© {new Date().getFullYear()} John Doe. All rights reserved.</p>
+            <p className="text-muted-foreground">© {new Date().getFullYear()} Joshua Adegbite. All rights reserved.</p>
           </div>
           <div className="flex gap-4">
             <a
@@ -488,6 +476,14 @@ export default function Home() {
               className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
             >
               <Github className="h-5 w-5" />
+            </a>
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
+            >
+              <TwitterIcon className="h-5 w-5" />
             </a>
             <a
               href="https://linkedin.com"
