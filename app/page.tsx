@@ -113,15 +113,19 @@ export default function Home() {
 
           <ScrollReveal delay={600}>
             <div className="flex gap-4 mt-6">
+                <a href="mailto:adegbitejoshua07@gmail.com" className="relative overflow-hidden group">
               <Button className="relative overflow-hidden group">
-                <span className="relative z-10">Contact Me</span>
-                <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                <Mail className="ml-2 h-4 w-4 relative z-10" />
+                  <span className="relative z-10">Contact Me</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                  <Mail className="ml-2 h-4 w-4 relative z-10" />
               </Button>
+                </a>
+                <a download href="/Joshua Adegbite Resume.pdf" className="group">
               <Button variant="outline" className="group">
-                Resume
-                <Download className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-1" />
+                  Resume
+                  <Download className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-1" />
               </Button>
+                </a>
             </div>
           </ScrollReveal>
 
@@ -165,7 +169,7 @@ export default function Home() {
           <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary/50 shadow-[0_0_25px_rgba(99,102,241,0.4)]">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent z-10"></div>
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG-20240930-WA0016.jpg-WhkStI7snQNAgwpbFfF0Sft7ckkgwY.jpeg"
+              src="/image.jpeg"
               alt="Joshua Adegbite - Software Engineer"
               fill
               className="object-cover"
