@@ -113,26 +113,26 @@ export default function Home() {
 
           <ScrollReveal delay={600}>
             <div className="flex gap-4 mt-6">
-                <a href="mailto:adegbitejoshua07@gmail.com" className="relative overflow-hidden group">
-              <Button className="relative overflow-hidden group">
+              <a href="mailto:adegbitejoshua07@gmail.com" className="relative overflow-hidden group">
+                <Button className="relative overflow-hidden group">
                   <span className="relative z-10">Contact Me</span>
                   <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
                   <Mail className="ml-2 h-4 w-4 relative z-10" />
-              </Button>
-                </a>
-                <a download href="/Joshua Adegbite Resume.pdf" className="group">
-              <Button variant="outline" className="group">
+                </Button>
+              </a>
+              <a download href="/Joshua Adegbite Resume.pdf" className="group">
+                <Button variant="outline" className="group">
                   Resume
                   <Download className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-1" />
-              </Button>
-                </a>
+                </Button>
+              </a>
             </div>
           </ScrollReveal>
 
           <ScrollReveal delay={800}>
             <div className="flex gap-4 mt-4">
               <a
-                href="https://github.com"
+                href="https://github.com/Adegbite-Joshua"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
@@ -140,7 +140,7 @@ export default function Home() {
                 <Github className="h-6 w-6" />
               </a>
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/in/adegbite-joshua-8a45a6257"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
@@ -148,7 +148,7 @@ export default function Home() {
                 <Linkedin className="h-6 w-6" />
               </a>
               <a
-                href="https://twitter.com"
+                href="https://x.com/JoshuaAdegbite7"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
@@ -156,7 +156,7 @@ export default function Home() {
                 <TwitterIcon className="h-6 w-6" />
               </a>
               <a
-                href="mailto:contact@example.com"
+                href="mailto:adegbitejoshua07@gmail.com"
                 className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
               >
                 <Mail className="h-6 w-6" />
@@ -203,7 +203,7 @@ export default function Home() {
           </ScrollReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <ScrollReveal>
+            <ScrollReveal className="mt-0">
               <div className="space-y-6">
                 <p className="text-lg">
                   I'm a passionate full-stack developer with over 5 years of experience building web applications. My
@@ -325,14 +325,14 @@ export default function Home() {
             ))}
           </div>
 
-          <ScrollReveal delay={700}>
+          {/* <ScrollReveal delay={700}>
             <div className="text-center mt-12">
               <Button variant="outline" size="lg" className="group">
                 View More Projects
                 <span className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
               </Button>
             </div>
-          </ScrollReveal>
+          </ScrollReveal> */}
         </div>
       </section>
 
@@ -405,19 +405,26 @@ export default function Home() {
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                       <Mail className="h-5 w-5" />
                     </div>
-                    <span>contact@example.com</span>
+                    <a
+                      href="mailto:adegbitejoshua07@gmail.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors"
+                    >
+                      adegbitejoshua07@gmail.com
+                    </a>
                   </div>
                   <div className="flex items-center gap-3 group">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                       <TwitterIcon className="h-5 w-5" />
                     </div>
                     <a
-                      href="https://twitter.com"
+                      href="https://x.com/JoshuaAdegbite7"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:text-primary transition-colors"
                     >
-                      @joshuaadegbite
+                      @JoshuaAdegbite7
                     </a>
                   </div>
                   <div className="flex items-center gap-3 group">
@@ -425,12 +432,12 @@ export default function Home() {
                       <Linkedin className="h-5 w-5" />
                     </div>
                     <a
-                      href="https://linkedin.com"
+                      href="https://www.linkedin.com/in/adegbite-joshua-8a45a6257"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:text-primary transition-colors"
                     >
-                      linkedin.com/in/joshuaadegbite
+                      linkedin.com/in/adegbite-joshua-8a45a6257
                     </a>
                   </div>
                   <div className="flex items-center gap-3 group">
@@ -438,12 +445,12 @@ export default function Home() {
                       <Github className="h-5 w-5" />
                     </div>
                     <a
-                      href="https://github.com"
+                      href="https://github.com/Adegbite-Joshua"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:text-primary transition-colors"
                     >
-                      github.com/joshuaadegbite
+                      github.com/Adegbite-Joshua
                     </a>
                   </div>
                 </div>
@@ -474,7 +481,7 @@ export default function Home() {
           </div>
           <div className="flex gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/Adegbite-Joshua"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
@@ -482,7 +489,7 @@ export default function Home() {
               <Github className="h-5 w-5" />
             </a>
             <a
-              href="https://twitter.com"
+              href="https://x.com/JoshuaAdegbite7"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
@@ -490,7 +497,7 @@ export default function Home() {
               <TwitterIcon className="h-5 w-5" />
             </a>
             <a
-              href="https://linkedin.com"
+              href="https://www.linkedin.com/in/adegbite-joshua-8a45a6257"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
@@ -498,7 +505,7 @@ export default function Home() {
               <Linkedin className="h-5 w-5" />
             </a>
             <a
-              href="mailto:contact@example.com"
+              href="mailto:adegbitejoshua07@gmail.com"
               className="text-muted-foreground hover:text-primary transition-all duration-300 hover:scale-110"
             >
               <Mail className="h-5 w-5" />
