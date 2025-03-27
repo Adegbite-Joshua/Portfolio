@@ -6,11 +6,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
 import { Send } from "lucide-react"
+import emailjs from '@emailjs/browser';
+import { toast } from "sonner"
+
 
 export function ContactForm() {
-  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -30,28 +31,45 @@ export function ContactForm() {
 
     // Simulate form submission
     try {
-      // In a real application, you would send this data to your backend
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const templateId = 'template_hq5013g'
+      const serviceId = 'service_1kutxo3'
+      const publicKey = 'cOM-bZ8-SyZERmUqo'
 
-      toast({
-        title: "Message sent!",
-        description: "Thank you for reaching out. I'll get back to you soon.",
-      })
+      const responseTemplateId = 'template_wwp12vd'
+      const responseServiceId = 'service_7xmouhq'
+      const responsePublicKey = 'cOM-bZ8-SyZERmUqo'
 
-      // Reset form
+
+
+      const templateParams = {
+        senderName: formData.name,
+        senderEmail: formData.email,
+        toName: 'Josha Adegbite ' + formData.subject,
+        message: formData.message
+      }
+
+      const responseTemplateParams = {
+        senderName: formData.name,
+        senderEmail: formData.email,
+        toName: 'Josha Adegbite',
+        message: formData.message
+      }
+
+      await emailjs.send(serviceId, templateId, templateParams, publicKey)
+      await emailjs.send(responseServiceId, responseTemplateId, responseTemplateParams, responsePublicKey)
+
+      toast.success('Message sent successfully!');
       setFormData({
         name: "",
         email: "",
         subject: "",
         message: "",
-      })
+      });
     } catch (error) {
-      toast({
-        title: "Something went wrong",
-        description: "Your message couldn't be sent. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
+      toast.error('Error sending message!');
+      console.error('Error submitting form:', error);
+    }
+    finally {
       setIsSubmitting(false)
     }
   }
