@@ -42,6 +42,33 @@ export const projects: ProjectProps[] = [
     imageUrl: "/buzzchat.jpeg",
   },
   {
+    name: "Milki - Hotel Management System",
+    description:
+      "A comprehensive hotel booking platform that allows users to browse, book, and pay for rooms online. Features include room management, booking system, payment processing, and an admin dashboard for managing rooms, bookings, and hotel operations.",
+    tags: [
+      {
+        name: "angular",
+        color: "blue-text-gradient",
+      },
+      {
+        name: "laravel",
+        color: "green-text-gradient",
+      },
+      {
+        name: "mysql",
+        color: "pink-text-gradient",
+      },
+      {
+        name: "paystack",
+        color: "purple-text-gradient",
+      },
+      
+    ],
+    source_code_link: "https://github.com/Adegbite-Joshua/Angular-Project",
+    web_url: "https://milki.vercel.app/",
+    imageUrl: "/milki.jpeg",
+  },
+  {
     name: "Hope Academy - Comprehensive School Management Platform",
     description:
       "A digital platform connecting students, staff, and administrators with features for CBT exams, video classrooms, report sheets, fee/salary payments (via Paystack), CV assessment, and real-time chat/video calls. Streamlines school operations and enhances learning through integrated tools.",

@@ -19,66 +19,73 @@ import { AutoScrollingTechStack } from "@/components/auto-scrolling-tech-stacks"
 
 export default function Home() {
   const words = [
-    {
-      text: "Full-Stack",
-    },
-    {
-      text: "Developer",
-    },
-    {
-      text: "specializing",
-    },
-    {
-      text: "in",
-    },
-    {
-      text: "Web",
-    },
-    {
-      text: "Technologies.",
-    },
-  ]
+    { text: "Full-stack developer." },
+    { text: "Code optimization specialist." },
+    { text: "UI/UX craftsman." },
+    { text: "Performance-driven engineer." },
+    { text: "AI-powered solutions builder." },
+    { text: "Web efficiency expert." },
+    { text: "Clean code advocate." },
+    { text: "Future-focused technologist." },
+    { text: "Productivity booster with AI." },
+    { text: "Seamless web experiences." },
+    { text: "Optimization at core." },
+    { text: "Smart automation believer." }
+  ];
 
   const experiences = [
     {
-      title: "Freelance Full-Stack Developer",
+      title: "Freelance Full Stack Developer",
       company: "Self-employed",
-      period: "2020 - Present",
-      description:
-        "Developed custom web applications for clients across various industries. Managed entire project lifecycles from requirements gathering to deployment and maintenance.",
+      period: "2024 - Present",
+      description: "Developed full-stack web applications for various clients.",
       achievements: [
-        "Delivered 15+ successful projects with 100% client satisfaction",
-        "Specialized in e-commerce solutions and content management systems",
-        "Implemented CI/CD pipelines reducing deployment time by 40%",
+        "Built real-time communication platforms with WebRTC",
+        "Created interactive learning management systems",
+        "Developed hotel booking platforms with payment integration",
+        "Implemented responsive designs across multiple projects"
       ],
-      technologies: ["React", "Node.js", "Next.js", "MongoDB", "PostgreSQL", "AWS"],
+      technologies: ["Nextjs", "React", "Angular", "Node.js", "Laravel", "MongoDB", "MySQL", "Paystack", "Stripe"]
+    },
+    {
+      title: "Frontend Developer",
+      company: "Crawdwall Company",
+      period: "2025 - Present",
+      description: "Develop responsive and interactive user interfaces for web applications using modern frontend frameworks.",
+      achievements: [
+        "Implemented component-based architecture improving code reusability",
+        "Optimized web performance through efficient rendering techniques",
+        "Collaborated with UX designers to build WCAG-compliant interfaces",
+        "Reduced bundle sizes through code splitting and lazy loading"
+      ],
+      technologies: ["React", "Tailwind CSS", "TypeScript", "Framer Motion"]
     },
     {
       title: "Backend Developer",
-      company: "TechSolutions Inc.",
-      period: "2018 - 2020",
-      description:
-        "Worked on the core API team to develop and maintain RESTful services for the company's SaaS platform.",
+      company: "LIACT",
+      period: "June 2024 - August 2024",
+      description: "Developed and maintained backend services for web applications.",
       achievements: [
-        "Reduced API response time by 30% through code optimization",
-        "Implemented robust error handling and logging systems",
-        "Contributed to the migration from monolith to microservices architecture",
+        "Built RESTful APIs with Node.js and Express",
+        "Implemented secure authentication with JWT",
+        "Optimized database queries for improved performance",
+        "Designed role-based access control system"
       ],
-      technologies: ["Node.js", "Express", "MongoDB", "Redis", "Docker", "Kubernetes"],
+      technologies: ["Node.js", "Express", "MongoDB", "JWT", "REST API"]
     },
     {
-      title: "Junior Web Developer",
-      company: "Digital Creations",
-      period: "2017 - 2018",
-      description: "Assisted in the development of responsive websites and web applications for various clients.",
+      title: "Software Engineering Student",
+      company: "Soft Quest Incorporated",
+      period: "2024",
+      description: "Completed intensive software engineering training program.",
       achievements: [
-        "Developed and maintained 10+ client websites",
-        "Collaborated with designers to implement pixel-perfect UIs",
-        "Optimized website performance achieving 90+ PageSpeed scores",
+        "Mastered full-stack development fundamentals",
+        "Developed multiple projects using modern web technologies",
+        "Gained experience with agile development methodologies"
       ],
-      technologies: ["HTML/CSS", "JavaScript", "PHP", "WordPress", "jQuery"],
-    },
-  ]
+      technologies: ["JavaScript", "HTML/CSS", "Node.js", "React", "MongoDB"]
+    }
+  ];
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-background text-foreground">
@@ -230,7 +237,7 @@ export default function Home() {
                     Frontend
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {["React", "Next.js", "Vue.js", "TypeScript", "Tailwind CSS", "Redux", "HTML/CSS"].map((skill) => (
+                    {["React", "Next.js", "Angular", "TypeScript", "Javascript", "Blade", "Tailwind CSS", "Redux", "jQuery", "HTML/CSS"].map((skill) => (
                       <span
                         key={skill}
                         className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
@@ -249,7 +256,7 @@ export default function Home() {
                     Backend
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {["Node.js", "Express", "Laravel", "MongoDB", "PostgreSQL", "REST APIs", "GraphQL"].map((skill) => (
+                    {["Node.js", "Express", "Laravel", "Python", "Flask", "MongoDB", "MySQL", "REST APIs", "Firebase"].map((skill) => (
                       <span
                         key={skill}
                         className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
@@ -268,13 +275,29 @@ export default function Home() {
                     Tools & Others
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {["Git", "Docker", "AWS", "CI/CD", "Jest", "Webpack", "Agile/Scrum"].map((skill) => (
-                      <span
-                        key={skill}
-                        className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
-                      >
-                        {skill}
-                      </span>
+                    {[
+                      "Git",
+                      "PWA",
+                      "AI & ML Integration",
+                      "REST APIs",
+                      "SQL/NoSQL",
+                      "React Native",
+                      "Redux",
+                      "Sass",
+                      "Figma",
+                      "UX/UI",
+                      "WebSockets",
+                      "Socket.io",
+                      "Stripe",
+                      "Paystack",
+                      "OAuth",
+                      "JWT",
+                    ].map((skill) => (<span
+                      key={skill}
+                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
+                    >
+                      {skill}
+                    </span>
                     ))}
                   </div>
                 </div>
@@ -296,6 +319,41 @@ export default function Home() {
 
       <ScrollReveal>
         <InspirationalQuote quote={quotes[1].quote} author={quotes[1].author} className="max-w-4xl mx-auto" />
+      </ScrollReveal>
+
+      {/* Experience Section */}
+      <section id="experience" className="relative w-full py-20 px-4 md:px-6">
+        <BackgroundPattern />
+
+        <div className="container mx-auto z-10 relative">
+          <ScrollReveal>
+            <div className="flex items-center gap-4 mb-4">
+              <Briefcase className="h-6 w-6 text-primary" />
+              <h2 className="text-3xl md:text-4xl font-bold">Work Experience</h2>
+              <div className="flex-grow h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={200}>
+            <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
+              My professional journey includes both freelance work and employment positions.
+            </p>
+          </ScrollReveal>
+
+          <div className="space-y-8">
+            {experiences.map((experience, index) => (
+              <ScrollReveal key={index} delay={300 + index * 150} direction={index % 2 === 0 ? "right" : "left"}>
+                <ExperienceCard experience={experience} />
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <SectionDivider />
+
+      <ScrollReveal>
+        <InspirationalQuote quote={quotes[2].quote} author={quotes[2].author} className="max-w-4xl mx-auto" />
       </ScrollReveal>
 
       {/* Projects Section */}
@@ -333,41 +391,6 @@ export default function Home() {
               </Button>
             </div>
           </ScrollReveal> */}
-        </div>
-      </section>
-
-      <SectionDivider />
-
-      <ScrollReveal>
-        <InspirationalQuote quote={quotes[2].quote} author={quotes[2].author} className="max-w-4xl mx-auto" />
-      </ScrollReveal>
-
-      {/* Experience Section */}
-      <section id="experience" className="relative w-full py-20 px-4 md:px-6">
-        <BackgroundPattern />
-
-        <div className="container mx-auto z-10 relative">
-          <ScrollReveal>
-            <div className="flex items-center gap-4 mb-4">
-              <Briefcase className="h-6 w-6 text-primary" />
-              <h2 className="text-3xl md:text-4xl font-bold">Work Experience</h2>
-              <div className="flex-grow h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
-            </div>
-          </ScrollReveal>
-
-          <ScrollReveal delay={200}>
-            <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-12">
-              My professional journey includes both freelance work and employment positions.
-            </p>
-          </ScrollReveal>
-
-          <div className="space-y-8">
-            {experiences.map((experience, index) => (
-              <ScrollReveal key={index} delay={300 + index * 150} direction={index % 2 === 0 ? "right" : "left"}>
-                <ExperienceCard experience={experience} />
-              </ScrollReveal>
-            ))}
-          </div>
         </div>
       </section>
 
