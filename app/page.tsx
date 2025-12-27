@@ -35,6 +35,19 @@ export default function Home() {
 
   const experiences = [
     {
+      title: "Chief Technology Officer (CTO)",
+      company: "Tela",
+      period: "May 2025 – Present",
+      description: "Lead all engineering efforts, overseeing deployment and production lifecycle for web/mobile applications, backend services, and AI model implementations.",
+      achievements: [
+        "Developed and maintained an admin overview platform to monitor transactions and system activities",
+        "Refactored and optimized backend code, eliminating critical errors and reducing API response time by 25%",
+        "Implemented database indexing and caching, improving query performance and reducing load time by 20%",
+        "Introduced API performance metrics and monitoring, ensuring faster debugging and improved reliability"
+      ],
+      technologies: ["Backend Services", "API Optimization", "Database Indexing", "Caching", "Performance Monitoring", "Web Applications", "Mobile Applications", "AI Model Implementations"]
+    },
+    {
       title: "Freelance Full Stack Developer",
       company: "Self-employed",
       period: "2024 - Present",
@@ -50,7 +63,7 @@ export default function Home() {
     {
       title: "Frontend Developer",
       company: "Crawdwall Company",
-      period: "2025 - Present",
+      period: "Dec 2024 – Mar 2025",
       description: "Develop responsive and interactive user interfaces for web applications using modern frontend frameworks.",
       achievements: [
         "Implemented component-based architecture improving code reusability",
