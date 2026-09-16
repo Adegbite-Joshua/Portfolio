@@ -8,8 +8,40 @@ import { Toaster } from "sonner"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Joshua Adegbite | Software Engineer",
-  description: "Personal portfolio of Joshua Adegbite, a full-stack software engineer specializing in web technologies.",
+  metadataBase: new URL("https://adegbite-joshua.dev"),
+  title: {
+    default: "Joshua Adegbite | Full-stack Software Engineer",
+    template: "%s | Joshua Adegbite",
+  },
+  description:
+    "Explore Joshua Adegbite's interactive portfolio OS: full-stack projects, experience, skills, resume, and contact information.",
+  keywords: [
+    "Joshua Adegbite",
+    "full-stack developer",
+    "software engineer",
+    "React developer",
+    "Next.js developer",
+    "Node.js developer",
+    "portfolio",
+  ],
+  authors: [{ name: "Joshua Adegbite" }],
+  creator: "Joshua Adegbite",
+  openGraph: {
+    title: "Joshua Adegbite | Full-stack Software Engineer",
+    description:
+      "A premium interactive portfolio operating system featuring Joshua Adegbite's projects, experience, skills, and contact details.",
+    type: "website",
+    images: [{ url: "/image.jpeg", width: 1200, height: 630, alt: "Joshua Adegbite" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Joshua Adegbite | Full-stack Software Engineer",
+    description: "Explore Joshua Adegbite's interactive portfolio OS.",
+    images: ["/image.jpeg"],
+  },
+  alternates: {
+    canonical: "/",
+  },
 }
 
 export default function RootLayout({

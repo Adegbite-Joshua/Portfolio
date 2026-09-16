@@ -44,14 +44,14 @@ export function ContactForm() {
       const templateParams = {
         senderName: formData.name,
         senderEmail: formData.email,
-        toName: 'Josha Adegbite ' + formData.subject,
+        toName: 'Joshua Adegbite ' + formData.subject,
         message: formData.message
       }
 
       const responseTemplateParams = {
         senderName: formData.name,
         senderEmail: formData.email,
-        toName: 'Josha Adegbite',
+        toName: 'Joshua Adegbite',
         message: formData.message
       }
 
@@ -75,10 +75,10 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="space-y-2 group">
-          <label htmlFor="name" className="text-sm font-medium group-focus-within:text-primary transition-colors">
+          <label htmlFor="name" className="text-sm font-medium text-white/80 transition-colors group-focus-within:text-white">
             Name
           </label>
           <Input
@@ -88,11 +88,11 @@ export function ContactForm() {
             required
             value={formData.name}
             onChange={handleChange}
-            className="border-primary/20 focus:border-primary transition-colors"
+            className="border-white/10 bg-white/[0.07] text-white placeholder:text-white/36 focus:border-white/40"
           />
         </div>
         <div className="space-y-2 group">
-          <label htmlFor="email" className="text-sm font-medium group-focus-within:text-primary transition-colors">
+          <label htmlFor="email" className="text-sm font-medium text-white/80 transition-colors group-focus-within:text-white">
             Email
           </label>
           <Input
@@ -103,12 +103,12 @@ export function ContactForm() {
             required
             value={formData.email}
             onChange={handleChange}
-            className="border-primary/20 focus:border-primary transition-colors"
+            className="border-white/10 bg-white/[0.07] text-white placeholder:text-white/36 focus:border-white/40"
           />
         </div>
       </div>
       <div className="space-y-2 group">
-        <label htmlFor="subject" className="text-sm font-medium group-focus-within:text-primary transition-colors">
+        <label htmlFor="subject" className="text-sm font-medium text-white/80 transition-colors group-focus-within:text-white">
           Subject
         </label>
         <Input
@@ -118,11 +118,11 @@ export function ContactForm() {
           required
           value={formData.subject}
           onChange={handleChange}
-          className="border-primary/20 focus:border-primary transition-colors"
+          className="border-white/10 bg-white/[0.07] text-white placeholder:text-white/36 focus:border-white/40"
         />
       </div>
       <div className="space-y-2 group">
-        <label htmlFor="message" className="text-sm font-medium group-focus-within:text-primary transition-colors">
+        <label htmlFor="message" className="text-sm font-medium text-white/80 transition-colors group-focus-within:text-white">
           Message
         </label>
         <Textarea
@@ -133,17 +133,15 @@ export function ContactForm() {
           required
           value={formData.message}
           onChange={handleChange}
-          className="border-primary/20 focus:border-primary transition-colors resize-none"
+          className="resize-none border-white/10 bg-white/[0.07] text-white placeholder:text-white/36 focus:border-white/40"
         />
       </div>
-      <Button type="submit" className="w-full relative overflow-hidden group" disabled={isSubmitting}>
+      <Button type="submit" className="relative w-full overflow-hidden rounded-md bg-white text-[#10141d] hover:bg-white/90" disabled={isSubmitting}>
         <span className="relative z-10">{isSubmitting ? "Sending..." : "Send Message"}</span>
-        <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
         {!isSubmitting && (
-          <Send className="ml-2 h-4 w-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+          <Send className="relative z-10 ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
         )}
       </Button>
     </form>
   )
 }
-
