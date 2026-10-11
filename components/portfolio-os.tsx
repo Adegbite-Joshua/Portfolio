@@ -34,6 +34,25 @@ import { ContactForm } from "@/components/contact-form"
 import { cn } from "@/lib/utils"
 import { experiences, portfolioProjects, profile, skillGroups, systemStats } from "@/data/portfolio"
 
+// Shared motion vocabulary so every GSAP timeline across the OS feels consistent.
+const MOTION = {
+  ease: {
+    out: "power3.out",
+    inOut: "power3.inOut",
+    in: "power3.in",
+    expo: "power4.out",
+    back: "back.out(1.9)",
+    elastic: "elastic.out(1, 0.5)",
+  },
+  dur: {
+    fast: 0.22,
+    base: 0.36,
+    slow: 0.58,
+  },
+} as const
+
+const ACCENT_PALETTE = ["#83eee2", "#9cc8ff", "#e2a8ff", "#ffb86b", "#79e0b5", "#ff8aa6"] as const
+
 type AppId = "about" | "projects" | "experience" | "skills" | "contact" | "resume" | "terminal" | "github" | "linkedin" | "settings"
 
 type WindowBounds = {
@@ -43,10 +62,15 @@ type WindowBounds = {
   height: number
 }
 
+type SnapZone = "left" | "right" | "max"
+
+type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
+
 type WindowState = {
   id: AppId
   minimized: boolean
   maximized?: boolean
+  snapped?: SnapZone
   restoreBounds?: WindowBounds
   z: number
   x: number
@@ -63,6 +87,14 @@ type DragState = {
   initialY: number
 }
 
+type ResizeState = {
+  id: AppId
+  dir: ResizeDir
+  startX: number
+  startY: number
+  startBounds: WindowBounds
+}
+
 type OpenOptions = {
   mobile?: boolean
   projectSlug?: string
@@ -74,7 +106,31 @@ type TerminalEntry =
   | { type: "prompt"; command: string }
   | { type: "output"; text: string }
   | { type: "error"; text: string }
+  | { type: "success"; text: string }
   | { type: "skills" }
+  | { type: "neofetch" }
+
+type TerminalCommand = { name: string; usage?: string; description: string }
+
+const TERMINAL_COMMANDS: TerminalCommand[] = [
+  { name: "help", description: "List available commands" },
+  { name: "whoami", description: "Print the current user" },
+  { name: "about", description: "Read Joshua's professional summary" },
+  { name: "neofetch", description: "Show the system / developer summary" },
+  { name: "skills", description: "List the technical skill tree" },
+  { name: "projects", description: "List featured portfolio projects" },
+  { name: "experience", description: "Show the work history" },
+  { name: "contact", description: "Show contact links" },
+  { name: "resume", description: "Open the resume document" },
+  { name: "open", usage: "open <app>", description: "Launch an OS app (about, projects, skills, contact, resume, settings)" },
+  { name: "theme", usage: "theme <color>", description: "Recolor the OS accent, e.g. theme #ff8aa6" },
+  { name: "echo", usage: "echo <text>", description: "Print text back to the screen" },
+  { name: "date", description: "Print the current date and time" },
+  { name: "pwd", description: "Print the working directory" },
+  { name: "history", description: "Show command history" },
+  { name: "ls", description: "List files in the current directory" },
+  { name: "clear", description: "Clear the terminal output" },
+]
 
 const appIcons = {
   about: User,
@@ -150,6 +206,40 @@ function isAppId(value: string | null): value is AppId {
   return Boolean(value && desktopApps.includes(value as AppId))
 }
 
+const WINDOW_MIN_WIDTH = 320
+const WINDOW_MIN_HEIGHT = 360
+
+function getMaximizedBounds(): WindowBounds {
+  return {
+    x: 36,
+    y: 42,
+    width: Math.max(WINDOW_MIN_WIDTH, window.innerWidth - 72),
+    height: Math.max(WINDOW_MIN_HEIGHT, window.innerHeight - 136),
+  }
+}
+
+function getHalfBounds(side: "left" | "right"): WindowBounds {
+  const margin = 24
+  const gap = 12
+  const top = 58
+  const bottomGap = 96
+  const width = Math.max(WINDOW_MIN_WIDTH, (window.innerWidth - margin * 2 - gap) / 2)
+  const height = Math.max(WINDOW_MIN_HEIGHT, window.innerHeight - top - bottomGap)
+  return { x: side === "left" ? margin : margin + width + gap, y: top, width, height }
+}
+
+function snapBoundsFor(zone: SnapZone): WindowBounds {
+  return zone === "max" ? getMaximizedBounds() : getHalfBounds(zone)
+}
+
+function detectSnapZone(clientX: number, clientY: number): SnapZone | null {
+  const edge = 26
+  if (clientX <= edge) return "left"
+  if (clientX >= window.innerWidth - edge) return "right"
+  if (clientY <= edge) return "max"
+  return null
+}
+
 function formatProjectSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
 }
@@ -158,7 +248,17 @@ function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
 
+function isCoarsePointer() {
+  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches
+}
+
+function applyAccent(color: string) {
+  if (typeof document === "undefined") return
+  document.documentElement.style.setProperty("--os-accent", color)
+}
+
 export function PortfolioOS() {
+  const [booted, setBooted] = useState(false)
   const [unlocked, setUnlocked] = useState(false)
   const [time, setTime] = useState<Date>(() => new Date())
   const [windows, setWindows] = useState<WindowState[]>([])
@@ -168,6 +268,13 @@ export function PortfolioOS() {
   const [showMobileRecents, setShowMobileRecents] = useState(false)
   const [selectedProject, setSelectedProject] = useState(formatProjectSlug(portfolioProjects[0]?.name ?? ""))
   const [dragState, setDragState] = useState<DragState | null>(null)
+  const [resizeState, setResizeState] = useState<ResizeState | null>(null)
+  const [snapPreview, setSnapPreview] = useState<{ zone: SnapZone; bounds: WindowBounds } | null>(null)
+  const snapZoneRef = useRef<SnapZone | null>(null)
+  const [spotlightOpen, setSpotlightOpen] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [accentIndex, setAccentIndex] = useState(0)
+  const spotlightTrigger = useRef<HTMLElement | null>(null)
   const firstWindowButton = useRef<HTMLButtonElement>(null)
   const closingWindows = useRef<Set<AppId>>(new Set())
   const resizingWindows = useRef<Set<AppId>>(new Set())
@@ -177,6 +284,58 @@ export function PortfolioOS() {
     setTime(new Date())
     const interval = window.setInterval(() => setTime(new Date()), 15000)
     return () => window.clearInterval(interval)
+  }, [])
+
+  // Skip the boot sequence for reduced-motion users and after the first boot of a session.
+  useEffect(() => {
+    if (prefersReducedMotion() || window.sessionStorage.getItem("mushos-booted")) {
+      setBooted(true)
+      return
+    }
+    window.sessionStorage.setItem("mushos-booted", "1")
+  }, [])
+
+  const completeBoot = useCallback(() => {
+    setBooted(true)
+    window.setTimeout(() => document.querySelector<HTMLElement>(".unlock-button")?.focus(), 60)
+  }, [])
+
+  const openSpotlight = useCallback((trigger?: HTMLElement | null) => {
+    spotlightTrigger.current = trigger ?? (document.activeElement as HTMLElement) ?? null
+    setContextMenu(null)
+    setSpotlightOpen(true)
+  }, [])
+
+  const closeSpotlight = useCallback(() => {
+    setSpotlightOpen(false)
+    const trigger = spotlightTrigger.current
+    if (trigger && typeof trigger.focus === "function") window.setTimeout(() => trigger.focus(), 0)
+  }, [])
+
+  const cycleAccent = useCallback(() => {
+    setAccentIndex((index) => {
+      const next = (index + 1) % ACCENT_PALETTE.length
+      applyAccent(ACCENT_PALETTE[next])
+      return next
+    })
+  }, [])
+
+  const cleanUpIcons = useCallback(() => {
+    if (prefersReducedMotion()) return
+    const icons = document.querySelectorAll<HTMLElement>(".desktop-icon-grid .app-icon")
+    gsap.fromTo(
+      icons,
+      { y: 16, scale: 0.92, opacity: 0.3 },
+      { y: 0, scale: 1, opacity: 1, stagger: 0.03, duration: MOTION.dur.base, ease: MOTION.ease.back },
+    )
+  }, [])
+
+  const handleDesktopContextMenu = useCallback((event: React.MouseEvent) => {
+    if (isCoarsePointer()) return
+    if ((event.target as HTMLElement).closest(".os-window, .desktop-dock, .glass-menubar")) return
+    event.preventDefault()
+    setSpotlightOpen(false)
+    setContextMenu({ x: event.clientX, y: event.clientY })
   }, [])
 
   const writeUrlState = useCallback((app: AppId | null, projectSlug?: string) => {
@@ -274,25 +433,6 @@ export function PortfolioOS() {
     }
   }, [openApp])
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        if (showMobileRecents) {
-          setShowMobileRecents(false)
-          return
-        }
-        const active = [...windows].filter((item) => !item.minimized).sort((a, b) => b.z - a.z)[0]
-        if (active) {
-          minimizeWindow(active.id)
-        } else if (mobileApp) {
-          setMobileApp(null)
-        }
-      }
-    }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  })
-
   const unlock = useCallback(() => {
     setUnlocked(true)
     const params = new URLSearchParams(window.location.search)
@@ -375,6 +515,7 @@ export function PortfolioOS() {
                 ...windowItem,
                 ...nextBounds,
                 maximized: nextMaximized,
+                snapped: undefined,
                 restoreBounds: nextMaximized ? currentBounds : undefined,
               }
             : windowItem,
@@ -405,15 +546,63 @@ export function PortfolioOS() {
     })
   }, [bringToFront, windows])
 
+  const commitSnap = useCallback(
+    (id: AppId, zone: SnapZone, bounds: WindowBounds) => {
+      const target = windows.find((windowItem) => windowItem.id === id)
+      if (!target) return
+      const current: WindowBounds = { x: target.x, y: target.y, width: target.width, height: target.height }
+      const commit = () =>
+        setWindows((items) =>
+          items.map((windowItem) =>
+            windowItem.id === id
+              ? { ...windowItem, ...bounds, snapped: zone, maximized: zone === "max", restoreBounds: windowItem.restoreBounds ?? current }
+              : windowItem,
+          ),
+        )
+      const element = document.querySelector<HTMLElement>(`[data-window-id="${id}"]`)
+      if (!element || prefersReducedMotion()) {
+        commit()
+        return
+      }
+      gsap.killTweensOf(element)
+      gsap.to(element, {
+        left: bounds.x,
+        top: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        x: 0,
+        y: 0,
+        scale: 1,
+        duration: MOTION.dur.base,
+        ease: MOTION.ease.inOut,
+        onComplete: commit,
+      })
+    },
+    [windows],
+  )
+
   const startDrag = useCallback((event: React.PointerEvent, windowItem: WindowState) => {
     if ((event.target as HTMLElement).closest("button,a")) return
-    setDragState({
-      id: windowItem.id,
-      startX: event.clientX,
-      startY: event.clientY,
-      initialX: windowItem.x,
-      initialY: windowItem.y,
-    })
+    let initialX = windowItem.x
+    let initialY = windowItem.y
+
+    // Pop a maximized/snapped window back to a floating size, centered under the cursor.
+    if (windowItem.maximized || windowItem.snapped) {
+      const restore = windowItem.restoreBounds ?? { x: 120, y: 90, width: 760, height: 560 }
+      const width = restore.width
+      const height = restore.height
+      initialX = Math.min(Math.max(12, event.clientX - width / 2), Math.max(12, window.innerWidth - width - 12))
+      initialY = 24
+      setWindows((items) =>
+        items.map((item) =>
+          item.id === windowItem.id
+            ? { ...item, x: initialX, y: initialY, width, height, maximized: false, snapped: undefined, restoreBounds: undefined }
+            : item,
+        ),
+      )
+    }
+
+    setDragState({ id: windowItem.id, startX: event.clientX, startY: event.clientY, initialX, initialY })
     ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
   }, [])
 
@@ -423,11 +612,122 @@ export function PortfolioOS() {
       const nextX = Math.min(Math.max(12, dragState.initialX + event.clientX - dragState.startX), Math.max(12, window.innerWidth - 280))
       const nextY = Math.min(Math.max(12, dragState.initialY + event.clientY - dragState.startY), Math.max(12, window.innerHeight - 180))
       setWindows((items) => items.map((windowItem) => (windowItem.id === dragState.id ? { ...windowItem, x: nextX, y: nextY } : windowItem)))
+
+      const zone = detectSnapZone(event.clientX, event.clientY)
+      if (zone !== snapZoneRef.current) {
+        snapZoneRef.current = zone
+        setSnapPreview(zone ? { zone, bounds: snapBoundsFor(zone) } : null)
+      }
     },
     [dragState],
   )
 
-  const stopDrag = useCallback(() => setDragState(null), [])
+  const stopDrag = useCallback(() => {
+    if (dragState && snapZoneRef.current) {
+      commitSnap(dragState.id, snapZoneRef.current, snapBoundsFor(snapZoneRef.current))
+    }
+    snapZoneRef.current = null
+    setSnapPreview(null)
+    setDragState(null)
+  }, [dragState, commitSnap])
+
+  const startResize = useCallback(
+    (event: React.PointerEvent, windowItem: WindowState, dir: ResizeDir) => {
+      event.stopPropagation()
+      bringToFront(windowItem.id)
+      setResizeState({
+        id: windowItem.id,
+        dir,
+        startX: event.clientX,
+        startY: event.clientY,
+        startBounds: { x: windowItem.x, y: windowItem.y, width: windowItem.width, height: windowItem.height },
+      })
+      ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    },
+    [bringToFront],
+  )
+
+  const onResize = useCallback(
+    (event: React.PointerEvent) => {
+      if (!resizeState) return
+      const { dir, startBounds: b } = resizeState
+      const dx = event.clientX - resizeState.startX
+      const dy = event.clientY - resizeState.startY
+      let x = b.x
+      let y = b.y
+      let width = b.width
+      let height = b.height
+
+      if (dir.includes("e")) width = b.width + dx
+      if (dir.includes("s")) height = b.height + dy
+      if (dir.includes("w")) {
+        width = b.width - dx
+        x = b.x + dx
+      }
+      if (dir.includes("n")) {
+        height = b.height - dy
+        y = b.y + dy
+      }
+
+      if (width < WINDOW_MIN_WIDTH) {
+        if (dir.includes("w")) x = b.x + b.width - WINDOW_MIN_WIDTH
+        width = WINDOW_MIN_WIDTH
+      }
+      if (height < WINDOW_MIN_HEIGHT) {
+        if (dir.includes("n")) y = b.y + b.height - WINDOW_MIN_HEIGHT
+        height = WINDOW_MIN_HEIGHT
+      }
+
+      x = Math.max(8, x)
+      y = Math.max(44, y)
+      width = Math.min(width, window.innerWidth - x - 8)
+      height = Math.min(height, window.innerHeight - y - 8)
+
+      setWindows((items) =>
+        items.map((windowItem) =>
+          windowItem.id === resizeState.id ? { ...windowItem, x, y, width, height, maximized: false, snapped: undefined } : windowItem,
+        ),
+      )
+    },
+    [resizeState],
+  )
+
+  const stopResize = useCallback(() => setResizeState(null), [])
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      // Spotlight: Cmd/Ctrl+Space from anywhere (modifier chord never types a literal space).
+      if ((event.metaKey || event.ctrlKey) && event.code === "Space") {
+        if (isCoarsePointer()) return
+        event.preventDefault()
+        if (spotlightOpen) closeSpotlight()
+        else openSpotlight()
+        return
+      }
+      if (event.key === "Escape") {
+        if (spotlightOpen) {
+          closeSpotlight()
+          return
+        }
+        if (contextMenu) {
+          setContextMenu(null)
+          return
+        }
+        if (showMobileRecents) {
+          setShowMobileRecents(false)
+          return
+        }
+        const active = [...windows].filter((item) => !item.minimized).sort((a, b) => b.z - a.z)[0]
+        if (active) {
+          minimizeWindow(active.id)
+        } else if (mobileApp) {
+          setMobileApp(null)
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [spotlightOpen, contextMenu, showMobileRecents, windows, mobileApp, minimizeWindow, openSpotlight, closeSpotlight])
 
   const activeWindow = useMemo(() => [...windows].filter((item) => !item.minimized).sort((a, b) => b.z - a.z)[0], [windows])
   const openedAppIds = windows.map((item) => item.id)
@@ -440,12 +740,19 @@ export function PortfolioOS() {
         Skip to portfolio content
       </a>
 
+      {!booted ? <BootScreen onComplete={completeBoot} /> : null}
+
       {!unlocked ? <LockScreen dateLabel={dateLabel} timeLabel={timeLabel} onUnlock={unlock} /> : null}
 
       <section aria-label="Desktop portfolio operating system" className={cn("desktop-os hidden min-h-screen md:block", !unlocked && "pointer-events-none")}>
-        <Wallpaper />
-        <DesktopMenuBar timeLabel={timeLabel} dateLabel={dateLabel} />
-        <div className="relative z-10 h-screen px-8 pb-24 pt-16">
+        <Wallpaper parallax />
+        <DesktopMenuBar
+          timeLabel={timeLabel}
+          dateLabel={dateLabel}
+          onSearch={(trigger) => openSpotlight(trigger)}
+          onMenu={() => openApp("settings")}
+        />
+        <div className="relative z-10 h-screen px-8 pb-24 pt-16" onContextMenu={handleDesktopContextMenu}>
           <div className="desktop-icon-grid" role="list" aria-label="Portfolio applications">
             {desktopApps.map((appId) => (
               <AppIconButton key={appId} id={appId} isOpen={openedAppIds.includes(appId)} onOpen={(originRect) => openApp(appId, { originRect })} />
@@ -466,6 +773,9 @@ export function PortfolioOS() {
                 onDragStart={startDrag}
                 onDrag={onDrag}
                 onDragEnd={stopDrag}
+                onResizeStart={startResize}
+                onResize={onResize}
+                onResizeEnd={stopResize}
                 firstButtonRef={activeWindow?.id === windowItem.id ? firstWindowButton : undefined}
                 launchOrigin={launchOrigins.current[windowItem.id]}
                 onLaunchAnimationComplete={() => {
@@ -475,6 +785,13 @@ export function PortfolioOS() {
                 <AppContent id={windowItem.id} selectedProject={selectedProject} setSelectedProject={setSelectedProject} openApp={openApp} />
               </DesktopWindow>
             ))}
+          {snapPreview ? (
+            <div
+              className="snap-preview"
+              aria-hidden="true"
+              style={{ left: snapPreview.bounds.x, top: snapPreview.bounds.y, width: snapPreview.bounds.width, height: snapPreview.bounds.height }}
+            />
+          ) : null}
         </div>
         <DesktopDock
           windows={windows}
@@ -533,8 +850,88 @@ export function PortfolioOS() {
         />
       </section>
 
+      {spotlightOpen ? (
+        <Spotlight
+          onLaunch={(id) => {
+            setSpotlightOpen(false)
+            openApp(id)
+          }}
+          onClose={closeSpotlight}
+        />
+      ) : null}
+
+      {contextMenu ? (
+        <DesktopContextMenu
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+          items={[
+            { label: "New Terminal", icon: Terminal, onSelect: () => openApp("terminal") },
+            { label: "Open Spotlight", icon: Search, onSelect: () => openSpotlight(null) },
+            { label: "About This MushOS", icon: Monitor, onSelect: () => openApp("settings") },
+            { label: "Change Accent", icon: Sparkles, onSelect: cycleAccent, keepOpen: true },
+            { label: "Clean Up Icons", icon: PanelsTopLeft, onSelect: cleanUpIcons },
+          ]}
+        />
+      ) : null}
+
       <SeoContent />
     </main>
+  )
+}
+
+const BOOT_LINES: Array<{ text: string; ok?: boolean }> = [
+  { text: "MushOS bootloader v1.0 — initializing", ok: false },
+  { text: "Mounted /dev/portfolio", ok: true },
+  { text: "Started display compositor", ok: true },
+  { text: "Loaded GSAP motion engine", ok: true },
+  { text: "Calibrated glass + blur pipeline", ok: true },
+  { text: "Restored user session", ok: true },
+  { text: "Starting MushOS desktop", ok: false },
+]
+
+function BootScreen({ onComplete }: { onComplete: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || prefersReducedMotion()) {
+      onComplete()
+      return
+    }
+
+    const context = gsap.context(() => {
+      const timeline = gsap.timeline({ onComplete })
+      timeline
+        .from(".boot-logo", { scale: 0.82, opacity: 0, filter: "blur(12px)", duration: MOTION.dur.base, ease: MOTION.ease.out })
+        .from(".boot-log-line", { opacity: 0, x: -12, stagger: 0.12, duration: 0.22, ease: MOTION.ease.out }, "-=0.08")
+        .fromTo(".boot-bar-fill", { scaleX: 0 }, { scaleX: 1, duration: 1.15, ease: "power2.inOut" }, 0.18)
+        .to(".boot-logo", { scale: 1.05, duration: 0.28, ease: MOTION.ease.out }, "-=0.24")
+        .to(root, { opacity: 0, scale: 1.04, filter: "blur(16px)", duration: MOTION.dur.base, ease: MOTION.ease.inOut }, "+=0.12")
+    }, root)
+
+    return () => context.revert()
+  }, [onComplete])
+
+  return (
+    <div ref={rootRef} className="boot-screen" role="status" aria-label="Starting MushOS">
+      <Wallpaper />
+      <div className="boot-inner">
+        <div className="boot-logo">
+          <span className="boot-mark">M</span>
+          <span className="boot-wordmark">MushOS</span>
+        </div>
+        <div className="boot-log" aria-hidden="true">
+          {BOOT_LINES.map((line) => (
+            <div key={line.text} className="boot-log-line">
+              {line.ok ? <span className="boot-ok">[&nbsp;&nbsp;OK&nbsp;&nbsp;]</span> : <span className="boot-dot">::</span>} {line.text}
+            </div>
+          ))}
+        </div>
+        <div className="boot-bar" aria-hidden="true">
+          <span className="boot-bar-fill" />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -599,26 +996,74 @@ function LockScreen({ dateLabel, timeLabel, onUnlock }: { dateLabel: string; tim
   )
 }
 
-function Wallpaper() {
+function Wallpaper({ parallax = false }: { parallax?: boolean }) {
+  const meshLayerRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!parallax || prefersReducedMotion() || isCoarsePointer()) return
+    const meshLayer = meshLayerRef.current
+    const grid = gridRef.current
+    if (!meshLayer || !grid) return
+
+    const meshX = gsap.quickTo(meshLayer, "x", { duration: 0.9, ease: MOTION.ease.out })
+    const meshY = gsap.quickTo(meshLayer, "y", { duration: 0.9, ease: MOTION.ease.out })
+    const gridX = gsap.quickTo(grid, "x", { duration: 1.2, ease: MOTION.ease.out })
+    const gridY = gsap.quickTo(grid, "y", { duration: 1.2, ease: MOTION.ease.out })
+
+    const onMove = (event: PointerEvent) => {
+      const nx = event.clientX / window.innerWidth - 0.5
+      const ny = event.clientY / window.innerHeight - 0.5
+      meshX(nx * -30)
+      meshY(ny * -30)
+      gridX(nx * -14)
+      gridY(ny * -14)
+    }
+
+    window.addEventListener("pointermove", onMove)
+    return () => window.removeEventListener("pointermove", onMove)
+  }, [parallax])
+
   return (
     <div className="wallpaper absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div className="wallpaper-mesh" />
-      <div className="wallpaper-grid" />
+      <div ref={meshLayerRef} className="wallpaper-layer">
+        <div className="wallpaper-mesh" />
+      </div>
+      <div ref={gridRef} className="wallpaper-grid" />
       <div className="wallpaper-sheen" />
     </div>
   )
 }
 
-function DesktopMenuBar({ timeLabel, dateLabel }: { timeLabel: string; dateLabel: string }) {
+function DesktopMenuBar({
+  timeLabel,
+  dateLabel,
+  onSearch,
+  onMenu,
+}: {
+  timeLabel: string
+  dateLabel: string
+  onSearch: (trigger: HTMLElement) => void
+  onMenu: () => void
+}) {
   return (
     <div className="glass-menubar fixed left-4 right-4 top-4 z-30 flex h-10 items-center justify-between px-4 text-sm text-white/78">
       <div className="flex items-center gap-3">
-        <Monitor className="h-4 w-4 text-white" />
-        <span className="font-semibold text-white">MushOS</span>
+        <button className="menubar-brand focus-ring" onClick={onMenu} aria-label="About This MushOS">
+          <Monitor className="h-4 w-4 text-white" />
+          <span className="font-semibold text-white">MushOS</span>
+        </button>
         <span className="hidden text-white/54 lg:inline">Adegbite Joshua</span>
       </div>
-      <div className="flex items-center gap-4">
-        <Search className="h-4 w-4" />
+      <div className="flex items-center gap-3">
+        <button
+          className="menubar-search focus-ring"
+          onClick={(event) => onSearch(event.currentTarget)}
+          aria-label="Open Spotlight search"
+        >
+          <Search className="h-4 w-4" />
+          <kbd className="menubar-kbd">⌘ Space</kbd>
+        </button>
         <Wifi className="h-4 w-4" />
         <BatteryFull className="h-4 w-4" />
         <span>{dateLabel}</span>
@@ -696,6 +1141,9 @@ function DesktopWindow({
   onDragStart,
   onDrag,
   onDragEnd,
+  onResizeStart,
+  onResize,
+  onResizeEnd,
   firstButtonRef,
   launchOrigin,
   onLaunchAnimationComplete,
@@ -710,6 +1158,9 @@ function DesktopWindow({
   onDragStart: (event: React.PointerEvent, windowItem: WindowState) => void
   onDrag: (event: React.PointerEvent) => void
   onDragEnd: () => void
+  onResizeStart: (event: React.PointerEvent, windowItem: WindowState, dir: ResizeDir) => void
+  onResize: (event: React.PointerEvent) => void
+  onResizeEnd: () => void
   firstButtonRef?: React.RefObject<HTMLButtonElement | null>
   launchOrigin?: DOMRect
   onLaunchAnimationComplete: () => void
@@ -804,6 +1255,20 @@ function DesktopWindow({
         </div>
       </header>
       <div className="window-content">{children}</div>
+      {!windowItem.maximized ? (
+        <div className="window-resize" aria-hidden="true">
+          {(["n", "s", "e", "w", "ne", "nw", "se", "sw"] as const).map((dir) => (
+            <span
+              key={dir}
+              className={`resize-handle resize-${dir}`}
+              onPointerDown={(event) => onResizeStart(event, windowItem, dir)}
+              onPointerMove={onResize}
+              onPointerUp={onResizeEnd}
+              onPointerCancel={onResizeEnd}
+            />
+          ))}
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -817,18 +1282,64 @@ function DesktopDock({
   onOpen: (id: AppId, originRect: DOMRect) => void
   onRestore: (id: AppId, originRect: DOMRect) => void
 }) {
+  const navRef = useRef<HTMLElement>(null)
+  const magnifyRef = useRef<Array<{ center: number; scale: ReturnType<typeof gsap.quickTo>; y: ReturnType<typeof gsap.quickTo> }>>([])
+
+  const buildMagnifiers = useCallback(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const tiles = Array.from(nav.querySelectorAll<HTMLElement>(".dock-tile"))
+    magnifyRef.current = tiles.map((tile) => {
+      const rect = tile.getBoundingClientRect()
+      return {
+        center: rect.left + rect.width / 2,
+        scale: gsap.quickTo(tile, "scale", { duration: 0.2, ease: "power3.out" }),
+        y: gsap.quickTo(tile, "y", { duration: 0.2, ease: "power3.out" }),
+      }
+    })
+  }, [])
+
+  const handleMagnify = (event: React.PointerEvent) => {
+    if (prefersReducedMotion() || isCoarsePointer()) return
+    if (!magnifyRef.current.length) buildMagnifiers()
+    const pointerX = event.clientX
+    const range = 130
+    const max = 1.5
+    for (const item of magnifyRef.current) {
+      const distance = Math.abs(pointerX - item.center)
+      const linear = Math.max(0, 1 - distance / range)
+      const influence = linear * linear * (3 - 2 * linear) // smoothstep falloff
+      item.scale(1 + (max - 1) * influence)
+      item.y(-18 * influence)
+    }
+  }
+
+  const resetMagnify = () => {
+    for (const item of magnifyRef.current) {
+      item.scale(1)
+      item.y(0)
+    }
+  }
+
   const animateDockPress = (id: AppId, action: () => void) => {
     const button = document.querySelector<HTMLElement>(`[data-dock-id="${id}"]`)
     if (button && !prefersReducedMotion()) {
       gsap.timeline()
-        .to(button, { y: -8, scale: 1.08, duration: 0.14, ease: "power2.out" })
-        .to(button, { y: 0, scale: 1, duration: 0.28, ease: "elastic.out(1, 0.55)" })
+        .to(button, { y: -8, duration: 0.14, ease: MOTION.ease.out })
+        .to(button, { y: 0, duration: 0.28, ease: "elastic.out(1, 0.55)" })
     }
     action()
   }
 
   return (
-    <nav className="desktop-dock glass-dock fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 px-3 py-2" aria-label="Desktop dock">
+    <nav
+      ref={navRef}
+      className="desktop-dock glass-dock fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 px-3 py-2"
+      aria-label="Desktop dock"
+      onPointerEnter={buildMagnifiers}
+      onPointerMove={handleMagnify}
+      onPointerLeave={resetMagnify}
+    >
       {internalApps.map((id) => {
         const Icon = appIcons[id]
         const state = windows.find((item) => item.id === id)
@@ -1167,7 +1678,7 @@ function ExperienceApp() {
             <ul className="mt-4 space-y-2 text-sm text-white/66">
               {item.achievements.map((achievement) => (
                 <li key={achievement} className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#83eee2]" />
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--os-accent)" }} />
                   {achievement}
                 </li>
               ))}
@@ -1274,18 +1785,55 @@ function ResumeApp() {
   )
 }
 
-function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) => void }) {
-  const [entries, setEntries] = useState<TerminalEntry[]>([
-    { type: "system", text: "Last login: Wed Sep 16 2026 on portfolio-os" },
-    { type: "system", text: "Type 'help' to see available commands." },
+function buildTerminalIntro(): TerminalEntry[] {
+  return [
+    { type: "system", text: "MushOS 1.0.4 LTS (portfolio-kernel x86_64)" },
+    { type: "system", text: `Last login: ${new Date().toDateString()} on tty1` },
+    { type: "system", text: "Type 'help' for the list of available commands." },
     { type: "prompt", command: "whoami" },
-    { type: "output", text: "joshua_adegbite" },
-    { type: "prompt", command: "cat about.txt" },
-    { type: "output", text: `${profile.title}. ${profile.summary}` },
-    { type: "prompt", command: "skills" },
-    { type: "skills" },
-  ])
+    { type: "output", text: "joshua-adegbite" },
+    { type: "prompt", command: "neofetch" },
+    { type: "neofetch" },
+  ]
+}
+
+function longestCommonPrefix(values: string[]): string {
+  if (!values.length) return ""
+  let prefix = values[0]
+  for (const value of values) {
+    while (!value.startsWith(prefix)) prefix = prefix.slice(0, -1)
+  }
+  return prefix
+}
+
+function resolveAccent(value: string): string | null {
+  const normalized = value.trim().toLowerCase()
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(normalized)) return normalized
+  const named: Record<string, string> = {
+    cyan: "#83eee2",
+    teal: "#83eee2",
+    blue: "#9cc8ff",
+    sky: "#9cc8ff",
+    purple: "#e2a8ff",
+    violet: "#e2a8ff",
+    orange: "#ffb86b",
+    amber: "#ffb86b",
+    green: "#79e0b5",
+    mint: "#79e0b5",
+    pink: "#ff8aa6",
+    rose: "#ff8aa6",
+    reset: "#83eee2",
+    default: "#83eee2",
+  }
+  return named[normalized] ?? null
+}
+
+function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) => void }) {
+  const [entries, setEntries] = useState<TerminalEntry[]>([])
   const [command, setCommand] = useState("")
+  const [history, setHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [booting, setBooting] = useState(true)
   const scrollerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -1293,22 +1841,65 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight })
   }, [entries])
 
-  const helpText = [
-    "Available commands:",
-    "whoami       - Display current user",
-    "cat about.txt - Read Joshua's professional summary",
-    "skills       - List technical skills",
-    "projects     - List featured portfolio projects",
-    "experience   - Show work history",
-    "contact      - Show contact links",
-    "resume       - Open resume document app",
-    "open <app>   - Open an OS app: about, projects, skills, contact, resume",
-    "clear        - Clear terminal output",
-    "help         - Show this message",
-  ]
+  // Typewriter boot: reveal the intro sequence, typing each command out character by character.
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setEntries(buildTerminalIntro())
+      setBooting(false)
+      return
+    }
+    const intro = buildTerminalIntro()
+    const timers: number[] = []
+    let cancelled = false
+    let index = 0
+
+    const schedule = (fn: () => void, delay: number) => {
+      timers.push(window.setTimeout(() => !cancelled && fn(), delay))
+    }
+
+    const next = () => {
+      if (cancelled) return
+      if (index >= intro.length) {
+        setBooting(false)
+        window.setTimeout(() => inputRef.current?.focus(), 0)
+        return
+      }
+      const item = intro[index]
+      index += 1
+      if (item.type === "prompt") {
+        const full = item.command
+        setEntries((prev) => [...prev, { type: "prompt", command: "" }])
+        let charIndex = 0
+        const typeChar = () => {
+          if (cancelled) return
+          charIndex += 1
+          const partial = full.slice(0, charIndex)
+          setEntries((prev) => {
+            const copy = prev.slice()
+            const last = copy[copy.length - 1]
+            if (last && last.type === "prompt") copy[copy.length - 1] = { type: "prompt", command: partial }
+            return copy
+          })
+          if (charIndex < full.length) schedule(typeChar, 52)
+          else schedule(next, 260)
+        }
+        schedule(typeChar, 160)
+      } else {
+        setEntries((prev) => [...prev, item])
+        schedule(next, item.type === "neofetch" ? 180 : 220)
+      }
+    }
+
+    schedule(next, 340)
+    return () => {
+      cancelled = true
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [])
 
   const runCommand = (rawCommand: string) => {
-    const normalized = rawCommand.trim().toLowerCase()
+    const trimmed = rawCommand.trim()
+    const normalized = trimmed.toLowerCase()
     const nextEntries: TerminalEntry[] = [{ type: "prompt", command: rawCommand }]
 
     if (!normalized) {
@@ -1322,7 +1913,9 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
     }
 
     if (normalized === "whoami") {
-      nextEntries.push({ type: "output", text: "joshua_adegbite" })
+      nextEntries.push({ type: "output", text: "joshua-adegbite" })
+    } else if (normalized === "neofetch" || normalized === "sysinfo") {
+      nextEntries.push({ type: "neofetch" })
     } else if (normalized === "cat about.txt" || normalized === "about") {
       nextEntries.push({ type: "output", text: `${profile.name} - ${profile.title}` })
       profile.about.forEach((paragraph) => nextEntries.push({ type: "output", text: paragraph }))
@@ -1345,6 +1938,32 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
     } else if (normalized === "resume") {
       openApp("resume")
       nextEntries.push({ type: "output", text: "Opening resume document..." })
+    } else if (normalized === "date") {
+      nextEntries.push({ type: "output", text: new Date().toString() })
+    } else if (normalized === "pwd") {
+      nextEntries.push({ type: "output", text: "/home/joshua-adegbite" })
+    } else if (normalized === "history") {
+      if (!history.length) {
+        nextEntries.push({ type: "output", text: "No commands in history yet." })
+      } else {
+        history.forEach((item, index) => nextEntries.push({ type: "output", text: `${String(index + 1).padStart(4)}  ${item}` }))
+      }
+    } else if (normalized.startsWith("echo")) {
+      const text = trimmed.slice(4).trim().replace(/^["']|["']$/g, "")
+      nextEntries.push({ type: "output", text })
+    } else if (normalized.startsWith("theme") || normalized.startsWith("accent")) {
+      const value = trimmed.slice(normalized.startsWith("theme") ? 5 : 6).trim()
+      if (!value) {
+        nextEntries.push({ type: "error", text: "usage: theme <color>  (e.g. theme #ff8aa6 or theme cyan)" })
+      } else {
+        const resolved = resolveAccent(value)
+        if (resolved) {
+          applyAccent(resolved)
+          nextEntries.push({ type: "success", text: `Accent set to ${resolved}.` })
+        } else {
+          nextEntries.push({ type: "error", text: `unknown color: ${value}` })
+        }
+      }
     } else if (normalized.startsWith("open ")) {
       const requestedApp = normalized.replace("open ", "").trim()
       if (["about", "projects", "experience", "skills", "contact", "resume", "settings"].includes(requestedApp)) {
@@ -1353,12 +1972,17 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
       } else {
         nextEntries.push({ type: "error", text: `app not found: ${requestedApp}` })
       }
+    } else if (normalized === "sudo" || normalized.startsWith("sudo ")) {
+      nextEntries.push({ type: "error", text: "joshua-adegbite is not in the sudoers file. This incident will be reported." })
     } else if (normalized === "help") {
-      helpText.forEach((line) => nextEntries.push({ type: "output", text: line }))
+      nextEntries.push({ type: "output", text: "Available commands:" })
+      TERMINAL_COMMANDS.forEach((item) => {
+        nextEntries.push({ type: "output", text: `  ${(item.usage ?? item.name).padEnd(16)}${item.description}` })
+      })
     } else if (normalized === "ls") {
       nextEntries.push({ type: "output", text: "about.txt  skills/  projects/  experience.log  contact.vcf  resume.pdf" })
     } else {
-      nextEntries.push({ type: "error", text: `command not found: ${rawCommand}` })
+      nextEntries.push({ type: "error", text: `command not found: ${trimmed}. Type 'help' for options.` })
     }
 
     setEntries((current) => [...current, ...nextEntries])
@@ -1366,8 +1990,44 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    runCommand(command)
+    const value = command
+    if (value.trim()) setHistory((prev) => [...prev, value.trim()])
+    setHistoryIndex(-1)
+    runCommand(value)
     setCommand("")
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowUp") {
+      if (!history.length) return
+      event.preventDefault()
+      const index = historyIndex < 0 ? history.length - 1 : Math.max(0, historyIndex - 1)
+      setHistoryIndex(index)
+      setCommand(history[index])
+    } else if (event.key === "ArrowDown") {
+      if (historyIndex < 0) return
+      event.preventDefault()
+      const index = historyIndex + 1
+      if (index >= history.length) {
+        setHistoryIndex(-1)
+        setCommand("")
+      } else {
+        setHistoryIndex(index)
+        setCommand(history[index])
+      }
+    } else if (event.key === "Tab") {
+      event.preventDefault()
+      const token = command.trim().toLowerCase()
+      if (!token || token.includes(" ")) return
+      const matches = TERMINAL_COMMANDS.map((item) => item.name).filter((name) => name.startsWith(token))
+      if (matches.length === 1) {
+        setCommand(matches[0] + " ")
+      } else if (matches.length > 1) {
+        const prefix = longestCommonPrefix(matches)
+        if (prefix.length > token.length) setCommand(prefix)
+        else setEntries((prev) => [...prev, { type: "prompt", command }, { type: "output", text: matches.join("   ") }])
+      }
+    }
   }
 
   return (
@@ -1376,7 +2036,7 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
         <span className="terminal-dot bg-[#ff5f57]" />
         <span className="terminal-dot bg-[#ffbd2e]" />
         <span className="terminal-dot bg-[#28c840]" />
-        <span className="terminal-title">Terminal</span>
+        <span className="terminal-title">joshua-adegbite@mush-os: ~</span>
       </div>
       <div ref={scrollerRef} className="terminal-screen">
         {entries.map((entry, index) => {
@@ -1391,24 +2051,41 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
           if (entry.type === "skills") {
             return <TerminalSkills key={`${entry.type}-${index}`} />
           }
+          if (entry.type === "neofetch") {
+            return <TerminalNeofetch key={`${entry.type}-${index}`} />
+          }
           return (
-            <div key={`${entry.type}-${index}`} className={cn("terminal-line", entry.type === "system" && "terminal-system", entry.type === "error" && "terminal-error")}>
+            <div
+              key={`${entry.type}-${index}`}
+              className={cn(
+                "terminal-line",
+                entry.type === "system" && "terminal-system",
+                entry.type === "error" && "terminal-error",
+                entry.type === "success" && "terminal-success",
+              )}
+            >
               {entry.text}
             </div>
           )
         })}
-        <form onSubmit={handleSubmit} className="terminal-line terminal-prompt-line">
+        <form onSubmit={handleSubmit} className={cn("terminal-line terminal-prompt-line terminal-active-line", booting && "terminal-hidden")}>
           <TerminalPrompt />
+          <span className="terminal-live">
+            <span className="terminal-command">{command}</span>
+            {!booting ? <span className="terminal-cursor" aria-hidden="true" /> : null}
+          </span>
           <input
             ref={inputRef}
             value={command}
             onChange={(event) => setCommand(event.target.value)}
-            className="terminal-input"
+            onKeyDown={handleKeyDown}
+            className="terminal-input-overlay"
             autoCapitalize="none"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
             aria-label="Terminal command"
+            disabled={booting}
           />
         </form>
       </div>
@@ -1419,10 +2096,50 @@ function TerminalApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
 function TerminalPrompt() {
   return (
     <span className="terminal-prompt" aria-hidden="true">
-      <span className="terminal-user">joshua@adegbite-pro</span>
-      <span className="terminal-path"> ~ </span>
+      <span className="terminal-user">joshua-adegbite@mush-os</span>
+      <span className="terminal-path">:~</span>
       <span className="terminal-dollar">$</span>
     </span>
+  )
+}
+
+function TerminalNeofetch() {
+  const counts = skillGroups.map((group) => `${group.title} ${group.skills.length}`).join("   ")
+  const info: Array<[string, string]> = [
+    ["OS", "MushOS 1.0.4 LTS x86_64"],
+    ["Host", "Portfolio Workstation"],
+    ["Kernel", "portfolio-kernel 6.1"],
+    ["Role", profile.title],
+    ["Location", profile.location],
+    ["Uptime", "5+ years in production"],
+    ["Shell", "mush-sh 1.0"],
+    ["Stack", "React · Next.js · Node.js · Laravel"],
+    ["Packages", counts],
+    ["Status", systemStats.find((stat) => stat.label === "Network")?.value ?? "Available for work"],
+  ]
+  return (
+    <div className="terminal-neofetch">
+      <pre className="terminal-neofetch-logo" aria-hidden="true">{`███╗   ███╗
+████╗ ████║
+██╔████╔██║
+██║╚██╔╝██║
+██║ ╚═╝ ██║
+╚═╝     ╚═╝`}</pre>
+      <div className="terminal-neofetch-info">
+        <div className="terminal-neofetch-head">joshua-adegbite@mush-os</div>
+        <div className="terminal-neofetch-rule">-----------------------</div>
+        {info.map(([key, value]) => (
+          <div key={key} className="terminal-neofetch-row">
+            <span className="terminal-neofetch-key">{key}</span>: {value}
+          </div>
+        ))}
+        <div className="terminal-neofetch-swatches" aria-hidden="true">
+          {ACCENT_PALETTE.map((color) => (
+            <span key={color} style={{ background: color }} />
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -1448,7 +2165,7 @@ function SettingsApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
     <div className="content-grid">
       <section className="panel-solid p-5">
         <div className="flex items-center gap-3">
-          <Terminal className="h-5 w-5 text-[#83eee2]" />
+          <Terminal className="h-5 w-5" style={{ color: "var(--os-accent)" }} />
           <h3 className="section-title">System Information</h3>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1474,6 +2191,195 @@ function SettingsApp({ openApp }: { openApp: (id: AppId, options?: OpenOptions) 
           })}
         </div>
       </section>
+    </div>
+  )
+}
+
+function Spotlight({ onLaunch, onClose }: { onLaunch: (id: AppId) => void; onClose: () => void }) {
+  const [query, setQuery] = useState("")
+  const [activeIndex, setActiveIndex] = useState(0)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const results = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    if (!normalized) return desktopApps
+    return desktopApps.filter((id) => appNames[id].toLowerCase().includes(normalized) || id.includes(normalized))
+  }, [query])
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [query])
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    if (prefersReducedMotion() || !overlayRef.current || !panelRef.current) return
+    const timeline = gsap.timeline()
+    timeline
+      .fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: MOTION.dur.fast, ease: MOTION.ease.out })
+      .fromTo(
+        panelRef.current,
+        { y: -16, scale: 0.97, opacity: 0, filter: "blur(12px)" },
+        { y: 0, scale: 1, opacity: 1, filter: "blur(0px)", duration: MOTION.dur.base, ease: MOTION.ease.out },
+        0,
+      )
+    return () => {
+      timeline.kill()
+    }
+  }, [])
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      setActiveIndex((index) => Math.min(results.length - 1, index + 1))
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault()
+      setActiveIndex((index) => Math.max(0, index - 1))
+    } else if (event.key === "Enter") {
+      event.preventDefault()
+      const id = results[activeIndex]
+      if (id) onLaunch(id)
+    } else if (event.key === "Escape") {
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
+    }
+  }
+
+  return (
+    <div
+      ref={overlayRef}
+      className="spotlight-overlay"
+      onPointerDown={(event) => {
+        if (event.target === overlayRef.current) onClose()
+      }}
+    >
+      <div ref={panelRef} className="spotlight-panel" role="dialog" aria-modal="true" aria-label="Spotlight search">
+        <div className="spotlight-field">
+          <Search className="h-5 w-5 text-white/55" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleKeyDown}
+            className="spotlight-input"
+            placeholder="Search apps and sections…"
+            aria-label="Search apps and sections"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <kbd className="spotlight-kbd">esc</kbd>
+        </div>
+        {results.length ? (
+          <ul className="spotlight-results" role="listbox" aria-label="Search results">
+            {results.map((id, index) => {
+              const Icon = appIcons[id]
+              return (
+                <li key={id} role="option" aria-selected={index === activeIndex}>
+                  <button
+                    type="button"
+                    className={cn("spotlight-result focus-ring", index === activeIndex && "is-active")}
+                    onMouseMove={() => setActiveIndex(index)}
+                    onClick={() => onLaunch(id)}
+                  >
+                    <span className="spotlight-result-icon" style={{ background: appGradients[id] }}>
+                      <Icon className="h-4 w-4 text-white" />
+                    </span>
+                    <span className="spotlight-result-label">{appNames[id]}</span>
+                    <span className="spotlight-result-hint">{index === activeIndex ? "↵ open" : ""}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        ) : (
+          <div className="spotlight-empty">No results for “{query.trim()}”.</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+type ContextMenuItem = { label: string; icon: typeof Monitor; onSelect: () => void; keepOpen?: boolean }
+
+function DesktopContextMenu({
+  position,
+  items,
+  onClose,
+}: {
+  position: { x: number; y: number }
+  items: ContextMenuItem[]
+  onClose: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const menu = menuRef.current
+    if (!menu) return
+    menu.querySelector<HTMLButtonElement>("button")?.focus()
+    if (!prefersReducedMotion()) {
+      gsap.fromTo(
+        menu,
+        { opacity: 0, scale: 0.92, y: -6 },
+        { opacity: 1, scale: 1, y: 0, duration: MOTION.dur.fast, ease: MOTION.ease.out, transformOrigin: "top left" },
+      )
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menu.contains(event.target as Node)) onClose()
+    }
+    window.addEventListener("pointerdown", onPointerDown)
+    return () => window.removeEventListener("pointerdown", onPointerDown)
+  }, [onClose])
+
+  // Keep the menu on-screen near the pointer.
+  const left = Math.min(position.x, (typeof window !== "undefined" ? window.innerWidth : 1280) - 232)
+  const top = Math.min(position.y, (typeof window !== "undefined" ? window.innerHeight : 800) - items.length * 42 - 24)
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    const buttons = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? [])
+    const current = buttons.indexOf(document.activeElement as HTMLButtonElement)
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      buttons[(current + 1) % buttons.length]?.focus()
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault()
+      buttons[(current - 1 + buttons.length) % buttons.length]?.focus()
+    } else if (event.key === "Escape") {
+      event.preventDefault()
+      event.stopPropagation()
+      onClose()
+    }
+  }
+
+  return (
+    <div
+      ref={menuRef}
+      className="context-menu"
+      role="menu"
+      aria-label="Desktop actions"
+      style={{ left, top }}
+      onKeyDown={handleKeyDown}
+    >
+      {items.map((item) => {
+        const Icon = item.icon
+        return (
+          <button
+            key={item.label}
+            type="button"
+            role="menuitem"
+            className="context-menu-item focus-ring"
+            onClick={() => {
+              item.onSelect()
+              if (!item.keepOpen) onClose()
+            }}
+          >
+            <Icon className="h-4 w-4 text-white/70" />
+            {item.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
