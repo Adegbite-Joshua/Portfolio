@@ -868,7 +868,7 @@ export function PortfolioOS() {
             { label: "New Terminal", icon: Terminal, onSelect: () => openApp("terminal") },
             { label: "Open Spotlight", icon: Search, onSelect: () => openSpotlight(null) },
             { label: "About This MushOS", icon: Monitor, onSelect: () => openApp("settings") },
-            { label: "Change Accent", icon: Sparkles, onSelect: cycleAccent, keepOpen: true },
+            { label: "Change Accent", icon: Sparkles, onSelect: cycleAccent, keepOpen: true, swatch: true },
             { label: "Clean Up Icons", icon: PanelsTopLeft, onSelect: cleanUpIcons },
           ]}
         />
@@ -1050,7 +1050,7 @@ function DesktopMenuBar({
     <div className="glass-menubar fixed left-4 right-4 top-4 z-30 flex h-10 items-center justify-between px-4 text-sm text-white/78">
       <div className="flex items-center gap-3">
         <button className="menubar-brand focus-ring" onClick={onMenu} aria-label="About This MushOS">
-          <Monitor className="h-4 w-4 text-white" />
+          <Monitor className="h-4 w-4" style={{ color: "var(--os-accent)" }} />
           <span className="font-semibold text-white">MushOS</span>
         </button>
         <span className="hidden text-white/54 lg:inline">Adegbite Joshua</span>
@@ -1108,7 +1108,7 @@ function SystemWidget({ onOpen }: { onOpen: (id: AppId) => void }) {
   return (
     <aside className="desktop-widget glass-panel absolute right-8 top-20 hidden w-[310px] p-4 xl:block" aria-label="Portfolio status">
       <div className="mb-4 flex items-center gap-3">
-        <Image src={profile.avatar} alt="" width={44} height={44} className="h-11 w-11 rounded-2xl object-cover" />
+        <Image src={profile.avatar} alt="" width={44} height={44} className="h-11 w-11 rounded-2xl object-cover" style={{ boxShadow: "0 0 0 2px var(--os-accent)" }} />
         <div>
           <p className="font-semibold text-white">{profile.name}</p>
           <p className="text-sm text-white/58">{profile.title}</p>
@@ -2302,7 +2302,7 @@ function Spotlight({ onLaunch, onClose }: { onLaunch: (id: AppId) => void; onClo
   )
 }
 
-type ContextMenuItem = { label: string; icon: typeof Monitor; onSelect: () => void; keepOpen?: boolean }
+type ContextMenuItem = { label: string; icon: typeof Monitor; onSelect: () => void; keepOpen?: boolean; swatch?: boolean }
 
 function DesktopContextMenu({
   position,
@@ -2376,7 +2376,8 @@ function DesktopContextMenu({
             }}
           >
             <Icon className="h-4 w-4 text-white/70" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.swatch ? <span className="context-menu-swatch" style={{ background: "var(--os-accent)" }} aria-hidden="true" /> : null}
           </button>
         )
       })}
